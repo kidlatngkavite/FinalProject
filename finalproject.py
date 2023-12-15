@@ -1,6 +1,7 @@
 from random import randint
 from os import system, path
 from time import sleep
+from phue import Bridge
 from playsound import playsound #requires playsound 1.2.2
 
 boardsize = 5       #default board size
@@ -14,6 +15,9 @@ playerScore = 0
 computerScore = 0
 cannonSoundPath = path.dirname(__file__) + '\\Cannon.mp3'
 explosionSoundPath = path.dirname(__file__) + '\\Explosion.mp3'
+hueBridge = Bridge("10.0.0.5")
+hueBridge.connect()
+lights = hueBridge.lights
 
 class Brd:
     def __init__(self, name, size, score, listofcoordinates=[]):
@@ -71,6 +75,39 @@ def axisInput(axis):
             sleep(1)
             continue
     return returnValue
+
+def miss(lightnames, bri):
+    global hueBridge
+    command =  {"transitiontime" : 30, 'on' : True,}
+    hueBridge.set_light(lightnames, command)
+    randomHue = randint(3000,6000)
+    randomBri =  randint(20,int(bri))
+    command =  {"transitiontime" : 1, "bri" : randomBri, "hue": randomHue, "sat": 249}
+    hueBridge.set_light(lightnames, command)
+    playsound(cannonSoundPath)
+    hueBridge.set_light(lightnames, 'on', False)    
+    return
+
+def hit():
+    global hueBridge
+    command =  {"transitiontime" : 30, 'on' : True,}
+    randomHue = randint(3000,6000)
+    lightset = ["Ferdie Ceiling 1",
+        "Ferdie Ceiling 2",
+        "Ferdie Ceiling 3",
+        "Ferdie Task Light 1",
+        "Ferdie Uplight 1",
+        "Ferdie Task Light 2",
+        "Ferdie Uplight 2"
+        ]
+    hueBridge.set_light(lightset, command)
+    command =  {"transitiontime" : 30, "bri" : 254, "hue": randomHue, "sat": 249}
+    hueBridge.set_light(lightset, command)
+    playsound(explosionSoundPath)
+    hueBridge.set_light(lightset, 'on', False)    
+    return
+
+
 #display welcome screen    
 system("cls")
 print("=" * 50)
@@ -104,7 +141,7 @@ while True :
     myBrd.print(playerScore) 
     #for troubleshooting
     #print(f"actual enemy position at {enemyShipRow},{enemyShipCol}")
-    #print(f"adjusted enemy position at {enemyShipRow-2},{enemyShipCol-2}")
+    print(f"adjusted enemy position at {enemyShipRow-2},{enemyShipCol-2}")
     #print(f"actual position of my ship at {myShipRow},{myShipCol}")
     #print(f"adjusted position of my ship at {myShipRow-2},{myShipCol-2}")
     # Player's turn
@@ -127,8 +164,9 @@ while True :
             print(f"Round: {round}")
             enemyBrd.print(computerScore)
             myBrd.print(playerScore)
-            print("Congratulations! You sunk my battleship!")
+#            hit() # for testing
             playsound(explosionSoundPath)
+            print("Congratulations! You sunk my battleship!")
             break
         else:
             #if (guess_row <= 2 or guess_row > boardsize +2) or (guess_col <= 2 or guess_col > boardsize + 2):
@@ -144,6 +182,7 @@ while True :
                 enemyBrd.print(computerScore)
                 myBrd.print(playerScore)
                 print("You guessed row: %d column: %d" % (guess_row-2,guess_col-2))
+#                miss(["Ferdie Uplight 1","Ferdie Uplight 2"],50) # for testing
                 playsound(cannonSoundPath)
                 print("You missed computer's battleship!")
                 sleep(1)
@@ -173,7 +212,8 @@ while True :
         enemyBrd.print(computerScore)
         myBrd.print(playerScore)
         print("Computer guessed row: %d column: %d" % (enemy_guess_row-2,enemy_guess_col-2))
-        playsound(cannonSoundPath)
+        miss(["Ferdie Uplight 1","Ferdie Uplight 2"],50)
+#        playsound(cannonSoundPath)
         if lost :
             myBrd.listofcoordinates[enemy_guess_row-1][enemy_guess_col-1] = "⨻"
             system("cls")
@@ -181,7 +221,8 @@ while True :
             enemyBrd.print(computerScore)
             myBrd.print(playerScore)
             print("You Lose!!!!")
-            playsound(explosionSoundPath)
+            hit()
+#            playsound(explosionSoundPath)
             break
         else :            
             print("Computer missed your battleship!")
